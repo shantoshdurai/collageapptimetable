@@ -127,9 +127,10 @@ private fun getUpcomingClass(schedule: List<ClassSchedule>): ClassSchedule? {
         schedule.find { classSchedule ->
             try {
                 val timeParts = classSchedule.time.split(" - ")
-                if (timeParts.size >= 1) {
+                if (timeParts.size >= 2) {
                     val classStartTime = java.time.LocalTime.parse(timeParts[0])
-                    // Only show as upcoming if the class hasn't started yet
+                    val classEndTime = java.time.LocalTime.parse(timeParts[1])
+                    // Show as upcoming if current time is before class start time
                     currentTime.isBefore(classStartTime)
                 } else {
                     false
@@ -322,12 +323,12 @@ private fun getThursdaySchedule(department: String, year: String, className: Str
                     ClassSchedule("3:00 - 4:00", "DeFi", "Room 204", "Ms. Howard", "Theory")
                 )
                 "A8" -> listOf(
-                    ClassSchedule("8:30 - 9:30", "Reinforcement Learning", "Room 301", "Dr. Ward", "Theory"),
-                    ClassSchedule("9:30 - 10:30", "Game AI", "Room 302", "Prof. Torres", "Theory"),
-                    ClassSchedule("10:45 - 11:45", "RL Lab", "Lab 3", "Mr. Peterson", "Lab"),
-                    ClassSchedule("11:45 - 12:45", "RL Lab", "Lab 3", "Mr. Peterson", "Lab"),
-                    ClassSchedule("2:00 - 3:00", "Autonomous Systems", "Room 303", "Dr. Gray", "Theory"),
-                    ClassSchedule("3:00 - 4:00", "AI Safety", "Room 304", "Ms. Ramirez", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 302", "Mrs.S.Lavanya", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
+                    ClassSchedule("12:20 - 01:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
+                    ClassSchedule("2:30 - 3:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("3:45 - 4:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
                 )
                 else -> getDefaultSchedule()
             }
@@ -645,7 +646,17 @@ private fun TimetableScreen(
     // Get today's schedule
     val todaySchedule = remember(department, year, className) {
         try {
-            getTodaysSchedule(department, year, className)
+            val today = LocalDate.now()
+            val dayOfWeek = today.dayOfWeek
+            val schedule = when (dayOfWeek) {
+                DayOfWeek.MONDAY -> getMondaySchedule(department, year, className)
+                DayOfWeek.TUESDAY -> getTuesdaySchedule(department, year, className)
+                DayOfWeek.WEDNESDAY -> getWednesdaySchedule(department, year, className)
+                DayOfWeek.THURSDAY -> getThursdaySchedule(department, year, className)
+                DayOfWeek.FRIDAY -> getFridaySchedule(department, year, className)
+                else -> listOf(ClassSchedule("Weekend", "No Classes", "N/A", "N/A"))
+            }
+            schedule
         } catch (e: Exception) {
             // Fallback to default schedule if there's an error
             listOf(
@@ -669,14 +680,14 @@ private fun TimetableScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background video (try timtableloop, fallback to ailoop)
+        // Background video - use timtableloop for timetable screen
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 VideoView(ctx).apply {
                     try {
-                        // Always use ailoop for now to avoid any video issues
-                        val videoUri = Uri.parse("android.resource://${ctx.packageName}/raw/ailoop")
+                        // Use timtableloop video for the timetable screen
+                        val videoUri = Uri.parse("android.resource://${ctx.packageName}/raw/timtableloop")
                         setVideoURI(videoUri)
                         setOnPreparedListener { mp ->
                             mp.isLooping = true
@@ -684,7 +695,18 @@ private fun TimetableScreen(
                             start()
                         }
                         setOnErrorListener { mp, what, extra ->
-                            // Handle video error silently
+                            // Fallback to ailoop if timtableloop fails
+                            try {
+                                val fallbackUri = Uri.parse("android.resource://${ctx.packageName}/raw/ailoop")
+                                setVideoURI(fallbackUri)
+                                setOnPreparedListener { fallbackMp ->
+                                    fallbackMp.isLooping = true
+                                    fallbackMp.setVolume(0f, 0f)
+                                    fallbackMp.start()
+                                }
+                            } catch (e: Exception) {
+                                // Handle fallback error silently
+                            }
                             true
                         }
                     } catch (e: Exception) {
@@ -818,14 +840,6 @@ private fun TimetableScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            // Debug info (temporary)
-            Text(
-                text = "Debug: Current time is ${java.time.LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))}",
-                color = Color.White.copy(alpha = 0.5f),
-                fontSize = 10.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
             if (todaySchedule.isNotEmpty()) {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -866,7 +880,7 @@ private fun ClassCard(classSchedule: ClassSchedule) {
             if (timeParts.size >= 2) {
                 val classStartTime = java.time.LocalTime.parse(timeParts[0])
                 val classEndTime = java.time.LocalTime.parse(timeParts[1])
-                // Check if current time is between start and end time (inclusive of start)
+                // Check if current time is between start and end time (inclusive of start, exclusive of end)
                 !currentTime.isBefore(classStartTime) && currentTime.isBefore(classEndTime)
             } else {
                 false
