@@ -1,6 +1,7 @@
 package com.example.loopvid
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
@@ -161,21 +162,10 @@ private fun getTodaysSchedule(department: String, year: String, className: Strin
 // Get upcoming class
 private fun getUpcomingClass(schedule: List<ClassSchedule>): ClassSchedule? {
     return try {
-        val currentTime = java.time.LocalTime.now()
+        val now = java.time.LocalTime.now()
         schedule.find { classSchedule ->
-            try {
-                val timeParts = classSchedule.time.split(" - ")
-                if (timeParts.size >= 2) {
-                    val classStartTime = java.time.LocalTime.parse(timeParts[0])
-                    val classEndTime = java.time.LocalTime.parse(timeParts[1])
-                    // Show as upcoming if current time is before class start time
-                    currentTime.isBefore(classStartTime)
-                } else {
-                    false
-                }
-            } catch (e: Exception) {
-                false
-            }
+            val (start, _) = parseTimeRange(classSchedule.time) ?: return@find false
+            now.isBefore(start)
         }
     } catch (e: Exception) {
         null
@@ -185,27 +175,73 @@ private fun getUpcomingClass(schedule: List<ClassSchedule>): ClassSchedule? {
 // Get time until next class
 private fun getTimeUntilNextClass(nextClass: ClassSchedule): String {
     return try {
-        val currentTime = java.time.LocalTime.now()
-        val timeParts = nextClass.time.split(" - ")
-        if (timeParts.size >= 1) {
-            val classTime = java.time.LocalTime.parse(timeParts[0])
-            val duration = java.time.Duration.between(currentTime, classTime)
-            
-            val hours = duration.toHours()
-            val minutes = duration.toMinutesPart()
-            
-            when {
-                hours > 0 -> "${hours}h ${minutes}m"
-                minutes > 0 -> "${minutes}m"
-                else -> "Starting now"
-            }
-        } else {
-            "Time not available"
+        val now = java.time.LocalTime.now()
+        val (start, _) = parseTimeRange(nextClass.time) ?: return "Time not available"
+        val duration = java.time.Duration.between(now, start)
+        val hours = duration.toHours()
+        val minutes = duration.toMinutesPart()
+        when {
+            hours > 0 -> "${hours}h ${minutes}m"
+            minutes > 0 -> "${minutes}m"
+            duration.isNegative || duration.isZero -> "Starting now"
+            else -> "${minutes}m"
         }
     } catch (e: Exception) {
         "Time not available"
     }
 }
+
+// Enhanced time parsing that handles all time formats correctly
+private fun parseTimeToLocalTime(raw: String): java.time.LocalTime? {
+    val cleaned = raw.trim()
+    val parts = cleaned.split(":")
+    if (parts.size < 2) return null
+    
+    val hour = parts[0].trim().toIntOrNull() ?: return null
+    val minute = parts[1].trim().take(2).toIntOrNull() ?: return null
+    
+    if (hour !in 0..23 || minute !in 0..59) return null
+    return java.time.LocalTime.of(hour, minute)
+}
+
+private fun parseTimeRange(range: String): Pair<java.time.LocalTime, java.time.LocalTime>? {
+    val sections = range.split("-")
+    if (sections.size < 2) return null
+    
+    val start = parseTimeToLocalTime(sections[0]) ?: return null
+    val endRaw = sections[1].trim()
+    val end = parseTimeToLocalTime(endRaw) ?: return null
+    
+    // Handle afternoon times (e.g., "12:20 - 01:20" means 12:20 - 13:20)
+    val adjustedEnd = if (end.isBefore(start) && start.hour >= 12) {
+        end.plusHours(12)
+    } else {
+        end
+    }
+    
+    return start to adjustedEnd
+}
+
+// =============================================================================
+// TIMETABLE FRAMEWORK - HOW TO ADD NEW CLASSES
+// =============================================================================
+// 
+// To add a new class (e.g., A1, A2, etc.), follow this pattern:
+// 
+// 1. Copy the A8 schedule structure below
+// 2. Replace "A8" with your class name (e.g., "A1")
+// 3. Update the class details (subjects, rooms, faculty, times)
+// 4. Repeat for all 5 days (Monday to Friday)
+// 5. Make sure time format is 24-hour (e.g., "14:30" not "2:30 PM")
+//
+// EXAMPLE FOR A1 CLASS:
+// "A1" -> listOf(
+//     ClassSchedule("9:00 - 10:00", "Subject Name", "Room Number", "Faculty Name", "Theory/Lab"),
+//     ClassSchedule("10:00 - 11:00", "Subject Name", "Room Number", "Faculty Name", "Theory/Lab"),
+//     // ... add more classes
+// )
+//
+// =============================================================================
 
 // Schedule generators for different departments and classes
 private fun getMondaySchedule(department: String, year: String, className: String): List<ClassSchedule> {
@@ -213,28 +249,36 @@ private fun getMondaySchedule(department: String, year: String, className: Strin
         "School of Engineering" -> when (year) {
             "Year 2" -> when (className) {
                 "A1" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Data Structures", "Room 101", "Dr. Smith", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Mathematics", "Room 102", "Prof. Johnson", "Theory"),
+                    ClassSchedule("9:00 - 10:00", "Data Structures", "Room Lab", "Mrs.M.Sheeba", "Lab"),
+                    ClassSchedule("10:00 - 11:00", "Data Structures", "Room Lab", "Mrs.M.Sheeb", "Lab"),
                     ClassSchedule("11:20 - 12:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                )
+                "A3" -> listOf(
+                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
                 )
                 "A8" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Data Structure", "Room 302", "Mrs.S.Lavanya", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
+                    ClassSchedule("11:20 - 12:20", "OOP Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
+                    ClassSchedule("12:20 - 13:20", "OOP Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
                 )
                 else -> getDefaultSchedule()
             }
@@ -260,25 +304,25 @@ private fun getTuesdaySchedule(department: String, year: String, className: Stri
                     ClassSchedule("9:00 - 10:00", "Data Structures", "Room 101", "Dr. Smith", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Mathematics", "Room 102", "Prof. Johnson", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
                 )
                 "A8" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 302", "Mrs.S.Lavanya", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
+                    ClassSchedule("9:00 - 10:00", "AIML", "Room 709", "Ms.G.Keerthana Sri", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Data structure", "Room 709", "Mrs.S.Lavanya", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Mathematics", "Room 709", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "OOP", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Lateral Thinking", "Room 709", "Mrs.M.Kanimozhi", "Theory")
                 )
                 else -> getDefaultSchedule()
             }
@@ -304,25 +348,25 @@ private fun getWednesdaySchedule(department: String, year: String, className: St
                     ClassSchedule("9:00 - 10:00", "Data Structures", "Room 101", "Dr. Smith", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Mathematics", "Room 102", "Prof. Johnson", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
                 )
                 "A8" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 302", "Mrs.S.Lavanya", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Mathematics", "Room 709", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "OOP", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "AIML", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Data Structure", "Room 709", "Mrs.S.Lavanya", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "HRDC", "Room 709", "Mrs.S.Ashwantika", "Theory")
                 )
                 else -> getDefaultSchedule()
             }
@@ -348,25 +392,33 @@ private fun getThursdaySchedule(department: String, year: String, className: Str
                     ClassSchedule("9:00 - 10:00", "Data Structures", "Room 101", "Dr. Smith", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Mathematics", "Room 102", "Prof. Johnson", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
                 )
                 "A8" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 302", "Mrs.S.Lavanya", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Oop", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 709", "Mrs.S.Lavanya", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "HRDC", "Room 709", "Mrs. Aswanthika", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "R Programming", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Mathematics", "Room 709", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "AIML", "Room 709", "Ms.G.Keerthana Sri", "Theory")
+                )
+                "A9" -> listOf(
+                    ClassSchedule("9:00 - 10:00", "Oop", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 709", "Mrs.S.Lavanya", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "HRDC", "Room 709", "Mrs. Aswanthika", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "R Programming", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Mathematics", "Room 709", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "AIML", "Room 709", "Ms.G.Keerthana Sri", "Theory")
                 )
                 else -> getDefaultSchedule()
             }
@@ -392,25 +444,25 @@ private fun getFridaySchedule(department: String, year: String, className: Strin
                     ClassSchedule("9:00 - 10:00", "Data Structures", "Room 101", "Dr. Smith", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Mathematics", "Room 102", "Prof. Johnson", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Programming Lab", "Lab 1", "Mr. Davis", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Artificial Intelligence", "Room 103", "Dr. Wilson", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
                     ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
                     ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
                 )
                 "A8" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Data Structure", "Room 302", "Mrs.S.Lavanya", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("12:20 - 01:20", "oop Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
-                    ClassSchedule("2:30 - 3:30", "Mathematics", "Room 303", "Dr.E.Ramesh Kumar", "Theory"),
-                    ClassSchedule("3:45 - 4:45", "R Programming", "Room 304", "Ms.J.Manivanan", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Data Structure", "Lab 2", "Mrs.S.Lavanya", "Lab"),
+                    ClassSchedule("10:00 - 11:00", "Data Structure", "Lab 2", "Mrs.S.Lavanya", "lab"),
+                    ClassSchedule("11:20 - 12:20", "AIML", "Room 709", "Ms.G.Keerthana Sri", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Mathematics", "Room 709", "Dr.E.Ramesh Kumar", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Lateral Thinking", "Room 709", "Mrs.M.Kanimozhi", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "OOP", "Room 709", "Mr.R.Karthikeyan", "Theory")
                 )
                 else -> getDefaultSchedule()
             }
@@ -682,6 +734,7 @@ private fun TimetableScreen(
     onBack: () -> Unit,
     onClearPreferences: () -> Unit
 ) {
+    val context = LocalContext.current
     // Get today's schedule
     val todaySchedule = remember(department, year, className) {
         try {
@@ -761,33 +814,13 @@ private fun TimetableScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Top bar with back button and header
+            // Clean top bar: title + class info + time (no action labels)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back button
-                Button(
-                    onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = Color.White
-                    ),
-                    border = BorderStroke(1.dp, Color.White),
-                    modifier = Modifier.size(40.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                ) {
-                    Text(
-                        text = "←",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                
                 // Header info
                 Column(
                     modifier = Modifier.weight(1f)
@@ -795,34 +828,16 @@ private fun TimetableScreen(
                     Text(
                         text = department,
                         color = Color.White,
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "$year - $className",
                         color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
-                
-                // Change Class button
-                Button(
-                    onClick = onClearPreferences,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = Color.White
-                    ),
-                    border = BorderStroke(1.dp, Color.White),
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(
-                        text = "🔄 Change Class",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                
                 // Current time indicator
                 Text(
                     text = java.time.LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
@@ -831,6 +846,16 @@ private fun TimetableScreen(
                     fontWeight = FontWeight.Medium
                 )
             }
+
+            // Subtle divider
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.12f))
+            )
+
+            
 
             // Upcoming class highlight
             upcomingClass?.let { nextClass ->
@@ -926,7 +951,8 @@ private fun TimetableScreen(
 
             if (todaySchedule.isNotEmpty()) {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp)
                 ) {
                     items(todaySchedule) { classSchedule ->
                         ClassCard(classSchedule = classSchedule)
@@ -950,45 +976,160 @@ private fun TimetableScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Fixed bottom action buttons inside layout flow, placed at the end
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Black.copy(alpha = 0.6f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = onBack,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text(
+                            text = "Back",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Button(
+                        onClick = onClearPreferences,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text(
+                            text = "Change Class",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+            // Leave space so content doesn't get hidden behind the bottom bar
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+        
+        // Bottom action bar anchored to the screen bottom (always visible)
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.Black.copy(alpha = 0.65f)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = {
+                        val intent = Intent(context, NotesActivity::class.java)
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4CAF50).copy(alpha = 0.8f),
+                        contentColor = Color.White
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF4CAF50)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                ) {
+                    Text(
+                        text = "Notes",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                
+                Button(
+                    onClick = onClearPreferences,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.08f),
+                        contentColor = Color.White
+                    ),
+                    border = BorderStroke(1.dp, Color.White),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                ) {
+                    Text(
+                        text = "Change Class",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun ClassCard(classSchedule: ClassSchedule) {
-    val isCurrentClass = remember(classSchedule) {
-        try {
-            val currentTime = java.time.LocalTime.now()
-            val timeParts = classSchedule.time.split(" - ")
-            if (timeParts.size >= 2) {
-                val classStartTime = java.time.LocalTime.parse(timeParts[0])
-                val classEndTime = java.time.LocalTime.parse(timeParts[1])
-                // Check if current time is between start and end time (inclusive of start, exclusive of end)
-                !currentTime.isBefore(classStartTime) && currentTime.isBefore(classEndTime)
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            false
+    // Add real-time updates every minute
+    var currentTime by remember { mutableStateOf(java.time.LocalTime.now()) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60000) // Update every minute
+            currentTime = java.time.LocalTime.now()
         }
     }
-
-    val isPastClass = remember(classSchedule) {
+    
+    val timeStatus = remember(classSchedule, currentTime) {
         try {
-            val currentTime = java.time.LocalTime.now()
-            val timeParts = classSchedule.time.split(" - ")
-            if (timeParts.size >= 2) {
-                val classEndTime = java.time.LocalTime.parse(timeParts[1])
-                // Check if current time is after the class end time
-                currentTime.isAfter(classEndTime)
+            val timeRange = parseTimeRange(classSchedule.time)
+            if (timeRange != null) {
+                val (startTime, endTime) = timeRange
+                when {
+                    currentTime.isBefore(startTime) -> "UPCOMING"
+                    currentTime.isAfter(endTime) -> "COMPLETED"
+                    else -> "CURRENT"
+                }
             } else {
-                false
+                "UNKNOWN"
             }
         } catch (e: Exception) {
-            false
+            "UNKNOWN"
         }
     }
+    
+    val isCurrentClass = timeStatus == "CURRENT"
+    val isPastClass = timeStatus == "COMPLETED"
 
     val cardColor = when {
         isCurrentClass -> Color(0xFF2196F3).copy(alpha = 0.9f) // Blue for current
@@ -1150,6 +1291,8 @@ private fun SelectionDialog(
                     }
                 }
             }
+
+            
         }
     }
 }
