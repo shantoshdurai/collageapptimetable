@@ -155,6 +155,7 @@ private fun getTodaysSchedule(department: String, year: String, className: Strin
         DayOfWeek.WEDNESDAY -> getWednesdaySchedule(department, year, className)
         DayOfWeek.THURSDAY -> getThursdaySchedule(department, year, className)
         DayOfWeek.FRIDAY -> getFridaySchedule(department, year, className)
+        DayOfWeek.SATURDAY -> getMondaySchedule(department, year, className)
         else -> listOf(ClassSchedule("Weekend", "No Classes", "N/A", "N/A"))
     }
 }
@@ -257,20 +258,20 @@ private fun getMondaySchedule(department: String, year: String, className: Strin
                     ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("9:00 - 10:00", "OOP Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
+                    ClassSchedule("10:00 - 11:00", "OOP Lab", "Lab 3", "Mr.R.Karthikeyan", "Lab"),
+                    ClassSchedule("11:20 - 12:20", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Data Structures", "Room 709", "Mrs.M.Sheeba", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Probability and Statistics", "Room 709", "Dr.K.Rajakumar", "Theory")
                 )
                 "A3" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Probability and Statistics", "Room 709", "Dr.K.Balamurugan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Lateral Thinking", "Room 709", "Mrs.B.Renugadevi", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Object Oriented Programming", "Room 709", "Mr.V.V.Sabeer", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Data Structures", "Room 709", "Dr.N.Shanmugapriya", "Theory")
                 )
                 "A8" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Lateral Thinking", "Room 301", "Mrs.M.Kanimozhi", "Theory"),
@@ -309,12 +310,20 @@ private fun getTuesdaySchedule(department: String, year: String, className: Stri
                     ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Object Oriented Programming", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Quantitative Skill Practice", "Room 709", "HRDC", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Probability and Statistics", "Room 709", "Dr.K.Rajakumar", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Lateral Thinking", "Room 709", "Mrs.M.Kanimozhi", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Data Structures", "Room 709", "Mrs.M.Sheeba", "Theory")
+                )
+                "A3" -> listOf(
+                    ClassSchedule("9:00 - 10:00", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Lateral Thinking", "Room 709", "Mrs.B.Renugadevi", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Data Structures Lab", "Lab 2", "Dr.N.Shanmugapriya", "Lab"),
+                    ClassSchedule("12:20 - 13:20", "Data Structures Lab", "Lab 2", "Dr.N.Shanmugapriya", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Probability and Statistics", "Room 709", "Dr.K.Balamurugan", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Quantitative Skill Practice", "Room 709", "HRDC", "Theory")
                 )
                 "A8" -> listOf(
                     ClassSchedule("9:00 - 10:00", "AIML", "Room 709", "Ms.G.Keerthana Sri", "Theory"),
@@ -353,12 +362,20 @@ private fun getWednesdaySchedule(department: String, year: String, className: St
                     ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Object Oriented Programming", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Data Structures Lab", "Lab 2", "Mrs.M.Sheeba", "Lab"),
+                    ClassSchedule("12:20 - 13:20", "Data Structures Lab", "Lab 2", "Mrs.M.Sheeba", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Probability and Statistics", "Room 709", "Dr.K.Rajakumar", "Theory")
+                )
+                "A3" -> listOf(
+                    ClassSchedule("9:00 - 10:00", "Object Oriented Programming", "Room 709", "Mr.V.V.Sabeer", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Lateral Thinking", "Room 709", "Mrs.B.Renugadevi", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Probability and Statistics", "Room 709", "Dr.K.Balamurugan", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Data Structures", "Room 709", "Dr.N.Shanmugapriya", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory")
                 )
                 "A8" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Mathematics", "Room 709", "Dr.E.Ramesh Kumar", "Theory"),
@@ -397,12 +414,20 @@ private fun getThursdaySchedule(department: String, year: String, className: Str
                     ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("9:00 - 10:00", "Data Structures", "Room 709", "Mrs.M.Sheeba", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Object Oriented Programming", "Room 709", "Mr.R.Karthikeyan", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Probability and Statistics", "Room 709", "Dr.K.Rajakumar", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Lateral Thinking", "Room 709", "Mrs.M.Kanimozhi", "Theory")
+                )
+                "A3" -> listOf(
+                    ClassSchedule("9:00 - 10:00", "Probability and Statistics", "Room 709", "Dr.K.Balamurugan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Object Oriented Programming", "Room 709", "Mr.V.V.Sabeer", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Data Structures Lab", "Lab 2", "Dr.N.Shanmugapriya", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "Quantitative Skill Practice", "Room 709", "HRDC", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Lateral Thinking", "Room 709", "Mrs.B.Renugadevi", "Theory")
                 )
                 "A8" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Oop", "Room 709", "Mr.R.Karthikeyan", "Theory"),
@@ -449,12 +474,20 @@ private fun getFridaySchedule(department: String, year: String, className: Strin
                     ClassSchedule("15:45 - 16:45", "Database Systems", "Room 104", "Ms. Brown", "Theory")
                 )
                 "A2" -> listOf(
-                    ClassSchedule("9:00 - 10:00", "Computer Networks", "Room 201", "Dr. Anderson", "Theory"),
-                    ClassSchedule("10:00 - 11:00", "Operating Systems", "Room 202", "Prof. Taylor", "Theory"),
-                    ClassSchedule("11:20 - 12:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("12:20 - 13:20", "Network Lab", "Lab 2", "Mr. Clark", "Lab"),
-                    ClassSchedule("14:30 - 15:30", "Software Engineering", "Room 203", "Dr. Lee", "Theory"),
-                    ClassSchedule("15:45 - 16:45", "Web Development", "Room 204", "Ms. Garcia", "Theory")
+                    ClassSchedule("9:00 - 10:00", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Data Structures", "Room 709", "Mrs.M.Sheeba", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "Probability and Statistics", "Room 709", "Dr.K.Rajakumar", "Theory"),
+                    ClassSchedule("12:20 - 13:20", "Lateral Thinking", "Room 709", "Mrs.M.Kanimozhi", "Theory"),
+                    ClassSchedule("14:30 - 15:30", "Quantitative Skill Practice", "Room 709", "HRDC", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Object Oriented Programming", "Room 709", "Mr.R.Karthikeyan", "Theory")
+                )
+                "A3" -> listOf(
+                    ClassSchedule("9:00 - 10:00", "Foundations of AI and ML", "Room 709", "Mr.K.Jeeva", "Theory"),
+                    ClassSchedule("10:00 - 11:00", "Data Structures", "Room 709", "Dr.N.Shanmugapriya", "Theory"),
+                    ClassSchedule("11:20 - 12:20", "OOP Lab", "Lab 3", "Mr.V.V.Sabeer", "Lab"),
+                    ClassSchedule("12:20 - 13:20", "OOP Lab", "Lab 3", "Mr.V.V.Sabeer", "Lab"),
+                    ClassSchedule("14:30 - 15:30", "R Programming", "Room 709", "Mr.J.Manivanan", "Theory"),
+                    ClassSchedule("15:45 - 16:45", "Probability and Statistics", "Room 709", "Dr.K.Balamurugan", "Theory")
                 )
                 "A8" -> listOf(
                     ClassSchedule("9:00 - 10:00", "Data Structure", "Lab 2", "Mrs.S.Lavanya", "Lab"),

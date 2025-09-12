@@ -1,7 +1,12 @@
 package com.example.loopvid
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
@@ -22,12 +27,32 @@ import androidx.compose.ui.viewinterop.AndroidView
 class NotesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        setContent {
-            NotesScreen(
-                onBackPressed = { finish() }
-            )
-        }
+		// Try to open Notion in Chrome first, then any browser. Fall back to WebView if unavailable.
+		val notionUrl = "https://www.notion.so/Study-Notes-Class-A8-24b05735a36e809e95dfe9f6119ba6fd?source=copy_link"
+		try {
+			val chromeIntent = Intent(Intent.ACTION_VIEW, Uri.parse(notionUrl)).apply {
+				addCategory(Intent.CATEGORY_BROWSABLE)
+				setPackage("com.android.chrome")
+			}
+			startActivity(chromeIntent)
+			finish()
+			return
+		} catch (_: ActivityNotFoundException) {
+			try {
+				val anyBrowserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(notionUrl)).apply {
+					addCategory(Intent.CATEGORY_BROWSABLE)
+				}
+				startActivity(anyBrowserIntent)
+				finish()
+				return
+			} catch (_: Exception) { /* fall through to WebView */ }
+		}
+
+		setContent {
+			NotesScreen(
+				onBackPressed = { finish() }
+			)
+		}
     }
 }
 
@@ -119,21 +144,52 @@ private fun NotesScreen(
                         builtInZoomControls = true
                         displayZoomControls = false
                         setSupportZoom(true)
+                        // Spoof a standard mobile Chrome UA for better Notion compatibility
+                        userAgentString =
+                            "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
                     }
+                    // Allow cookies so Notion can authenticate/load content
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    try {
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    } catch (_: Throwable) { }
                     
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             isLoading = false
                         }
-                        
+                        // Keep navigation inside WebView. Translate deep links to https and load here.
                         override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                            // Keep navigation within the WebView
-                            return false
+                            if (url == null) return false
+                            return try {
+                                val uri = Uri.parse(url)
+                                when (uri.scheme) {
+                                    "http", "https" -> false
+                                    "notion" -> {
+                                        val httpsUrl = url.replaceFirst("notion://", "https://")
+                                        view?.loadUrl(httpsUrl)
+                                        true
+                                    }
+                                    "intent" -> {
+                                        val intent = try { Intent.parseUri(url, 0) } catch (_: Exception) { null }
+                                        val dataUrl = intent?.dataString
+                                        if (dataUrl != null) {
+                                            view?.loadUrl(dataUrl)
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+                                    else -> false
+                                }
+                            } catch (_: Exception) {
+                                false
+                            }
                         }
                     }
                     
-                    // Load the Notion link
+                    // Fallback: load Notion inside the WebView if no external browser is available
                     loadUrl("https://www.notion.so/Study-Notes-Class-A8-24b05735a36e809e95dfe9f6119ba6fd?source=copy_link")
                 }
             }
