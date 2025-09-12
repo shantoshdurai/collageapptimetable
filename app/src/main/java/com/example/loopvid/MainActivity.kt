@@ -1088,7 +1088,14 @@ private fun TimetableScreen(
             ) {
                 Button(
                     onClick = {
-                        val intent = Intent(context, NotesActivity::class.java)
+                        // If School of Engineering, Year 2, Class A8 → open Notion screen.
+                        // Else open placeholder notes screen.
+                        val target = if (department == "School of Engineering" && year == "Year 2" && className == "A8") {
+                            NotesActivity::class.java
+                        } else {
+                            PlaceholderNotesActivity::class.java
+                        }
+                        val intent = Intent(context, target)
                         context.startActivity(intent)
                     },
                     colors = ButtonDefaults.buttonColors(

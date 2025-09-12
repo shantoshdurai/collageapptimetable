@@ -29,6 +29,10 @@
             android:name=".NotesActivity"
             android:exported="false"
             android:theme="@style/Theme.Loopvid" />
+        <activity
+            android:name=".PlaceholderNotesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Loopvid" />
     </application>
 
 </manifest>
