@@ -1,11 +1,16 @@
 package com.example.loopvid
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.VideoView
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -51,8 +56,16 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
+    
+    companion object {
+        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Request notification permission
+        requestNotificationPermission()
         
         setContent {
             val context = LocalContext.current
@@ -62,6 +75,13 @@ class MainActivity : ComponentActivity() {
             val savedDepartment = prefs.getString("saved_department", null)
             val savedYear = prefs.getString("saved_year", null)
             val savedClass = prefs.getString("saved_class", null)
+            
+            // Schedule notifications if we have saved preferences
+            if (savedDepartment != null && savedYear != null && savedClass != null) {
+                LaunchedEffect(Unit) {
+                    scheduleClassNotifications(context, savedDepartment, savedYear, savedClass)
+                }
+            }
             
             // Simple screen state management
             var currentScreen by remember { 
@@ -94,6 +114,10 @@ class MainActivity : ComponentActivity() {
                     onClassSelected = { className ->
                         // Save user preferences when class is selected
                         saveUserPreferences(prefs, screen.department, screen.year, className)
+                        
+                        // Schedule notifications for the selected class
+                        scheduleClassNotifications(context, screen.department, screen.year, className)
+                        
                         currentScreen = Screen.Timetable(screen.department, screen.year, className)
                     },
                     onBack = { currentScreen = Screen.YearSelection(screen.department) }
@@ -104,10 +128,46 @@ class MainActivity : ComponentActivity() {
                     className = screen.className,
                     onBack = { currentScreen = Screen.Home },
                     onClearPreferences = {
+                        // Clear notifications before clearing preferences
+                        clearAllNotifications(context)
                         clearUserPreferences(prefs)
                         currentScreen = Screen.Home
                     }
                 )
+            }
+        }
+    }
+    
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        when (requestCode) {
+            NOTIFICATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted - notifications will work
+                } else {
+                    // Permission denied - notifications won't work, but app continues to function
+                }
             }
         }
     }
@@ -125,6 +185,34 @@ private fun saveUserPreferences(prefs: SharedPreferences, department: String, ye
 
 private fun clearUserPreferences(prefs: SharedPreferences) {
     prefs.edit().clear().apply()
+}
+
+
+// Schedule notifications for the selected class
+private fun scheduleClassNotifications(context: Context, department: String, year: String, className: String) {
+    try {
+        val notificationHelper = NotificationHelper(context)
+        
+        // Get today's schedule to determine what classes to schedule
+        val todaySchedule = getTodaysSchedule(department, year, className)
+        
+        // Schedule notifications for the next 7 days
+        notificationHelper.scheduleClassNotifications(department, year, className, todaySchedule)
+    } catch (e: Exception) {
+        // Handle any errors silently - notifications are not critical for app functionality
+        e.printStackTrace()
+    }
+}
+
+// Clear all scheduled notifications
+private fun clearAllNotifications(context: Context) {
+    try {
+        val notificationHelper = NotificationHelper(context)
+        notificationHelper.clearAllNotifications()
+    } catch (e: Exception) {
+        // Handle any errors silently
+        e.printStackTrace()
+    }
 }
 
 // Simple screen navigation model
@@ -563,6 +651,23 @@ private fun HomeScreen(
             }
         )
 
+        // DSU-TRICHY text at the top
+        Text(
+            text = "DSU-TRICHY",
+            color = Color.White,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 4.sp,
+            style = androidx.compose.ui.text.TextStyle(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 4.sp
+            ),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 120.dp)
+        )
+
         // Bottom button
         Column(
             modifier = Modifier
@@ -851,7 +956,7 @@ private fun TimetableScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(top = 16.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Header info
@@ -1082,8 +1187,8 @@ private fun TimetableScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
@@ -1105,13 +1210,13 @@ private fun TimetableScreen(
                     border = BorderStroke(1.dp, Color(0xFF4CAF50)),
                     modifier = Modifier
                         .weight(1f)
-                        .height(46.dp)
+                        .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
                 ) {
                     Text(
                         text = "Notes",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
                 
@@ -1124,13 +1229,44 @@ private fun TimetableScreen(
                     border = BorderStroke(1.dp, Color.White),
                     modifier = Modifier
                         .weight(1f)
-                        .height(46.dp)
+                        .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
                 ) {
                     Text(
-                        text = "Change Class",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        text = "Change",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                
+                // Test notification button (for development/testing)
+                Button(
+                    onClick = {
+                        val notificationHelper = NotificationHelper(context)
+                        notificationHelper.showImmediateNotification(
+                            subject = "Test Class",
+                            time = "10:00 - 11:00",
+                            room = "Test Room",
+                            faculty = "Test Faculty",
+                            department = department,
+                            year = year,
+                            className = className
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF9800).copy(alpha = 0.8f),
+                        contentColor = Color.White
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFFFF9800)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                ) {
+                    Text(
+                        text = "Test",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -1173,8 +1309,8 @@ private fun ClassCard(classSchedule: ClassSchedule) {
 
     val cardColor = when {
         isCurrentClass -> Color(0xFF2196F3).copy(alpha = 0.9f) // Blue for current
-        isPastClass -> Color.Gray.copy(alpha = 0.6f) // Gray for past
-        else -> Color.Black.copy(alpha = 0.7f) // Default for upcoming
+        isPastClass -> Color.Gray.copy(alpha = 0.4f) // Gray for past - more transparent
+        else -> Color.Black.copy(alpha = 0.5f) // Default for upcoming - more transparent
     }
 
     val statusText = when {
