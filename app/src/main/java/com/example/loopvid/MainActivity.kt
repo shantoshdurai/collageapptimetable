@@ -741,7 +741,7 @@ private fun YearSelectionScreen(
         Text(
             text = department,
             color = Color.White,
-            fontSize = 24.sp,
+                fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -884,6 +884,7 @@ private fun TimetableScreen(
                 DayOfWeek.WEDNESDAY -> getWednesdaySchedule(department, year, className)
                 DayOfWeek.THURSDAY -> getThursdaySchedule(department, year, className)
                 DayOfWeek.FRIDAY -> getFridaySchedule(department, year, className)
+                DayOfWeek.SATURDAY -> getMondaySchedule(department, year, className)
                 else -> listOf(ClassSchedule("Weekend", "No Classes", "N/A", "N/A"))
             }
             schedule
